@@ -3,28 +3,13 @@
 #include <valarray>
 #include "Particle.h"
 #include <cmath>
+#include <vector>
 
-bool CheckBorderCollision(const int& width, const int& height, sf::Vector2f pos, sf::Vector2f& vel, const int radius) {
-    if (pos.x - radius < 0.0f) { //Left wall
-        vel.x = -vel.x;
-        return true;
-    }
-    else if (pos.x + radius > width) { //Right wall
-        vel.x = -vel.x;
-        return true;
-    }
+int width = 1280;
+int height = 720;
 
-    if (pos.y - radius < 0.0f) { //Top wall
-        vel.y = -vel.y;
-        return true;
-    }
-    else if (pos.y + radius > height) { //Bottom wall
-        vel.y = -vel.y;
-        return true;
-    }
-
-    return false;
-}
+float const gravityMod = 50.0f;
+float friction = 0.99f;
 
 void CheckParticleCollision(const int& redRadius, const int& greenRadius, const sf::Vector2f& redPos,
                             const sf::Vector2f& greenPos, sf::Vector2f& redVel, sf::Vector2f& greenVel,
@@ -43,32 +28,34 @@ void CheckParticleCollision(const int& redRadius, const int& greenRadius, const 
     }
 }
 
+std::tuple<float, sf::Vector2f, float> computeForce2Particles(Particle Particle1, Particle Particle2) {
+    //Returns force, direction and distance
+    sf::Vector2f direction = Particle2.position - Particle1.position;
+    float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+    if (distance > 0) {
+        direction /= distance; //Normalize vector to a unit vector of 1
+    }
+    float force = ((Particle1.mass * Particle2.mass) * ::gravityMod) / pow(distance, 2);
+    return std::make_tuple(force, direction, distance);
+}
 
 
 int main() {
-int width = 1280;
-int height = 720;
+
+
 sf::RenderWindow window(sf::VideoMode(width, height), "ParticleSim");
 window.setFramerateLimit(60);
 
 // Create the circle shape once, outside the main loop
-sf::CircleShape GreenCircle(20.f);
-GreenCircle.setFillColor(sf::Color(50, 255, 55));
-GreenCircle.setPosition(400.f, 250.f);
-GreenCircle.setOrigin(GreenCircle.getRadius(), GreenCircle.getRadius());
 
-sf::CircleShape RedCircle(20.f);
-RedCircle.setFillColor(sf::Color(250, 55, 55));
-RedCircle.setPosition(250.f, 200.f);
-RedCircle.setOrigin(RedCircle.getRadius(), RedCircle.getRadius());
+Particle BlueCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(300.0f, 300.0f), 20.0f, 50.f,
+    std::make_tuple(50, 55, 255));
+Particle GreenCircle(std::make_tuple(25.0f, 0.0f), std::make_tuple(100.0f, 150.0f), 20.0f, 50.f,
+    std::make_tuple(50, 255, 55));
+Particle RedCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(200.0f, 200.0f), 20.0f, 50.f,
+std::make_tuple(255, 55, 55));
 
-float const gravityMod = 50.0f;
-float friction = 0.99f;
-const float green_mass = 20.0f;
-const float red_mass = 20.0f;
-
-sf::Vector2f green_velocity(0.0f, 0.0f);
-sf::Vector2f red_velocity(0.0f, 0.0f);
+std::vector<Particle> particles = {BlueCircle, GreenCircle, RedCircle};
 
 while (window.isOpen()) {
 
@@ -94,43 +81,39 @@ while (window.isOpen()) {
             break;
     }
     }
-
     window.clear(sf::Color::Black);
 
-    sf::Vector2f GreenPos = GreenCircle.getPosition();
-    sf::Vector2f RedPos = RedCircle.getPosition();
-    sf::Vector2f G2Rdirection = RedPos - GreenPos;
-    float distance = std::sqrt(G2Rdirection.x * G2Rdirection.x + G2Rdirection.y * G2Rdirection.y);
-    if (distance > 0) {
-        G2Rdirection /= distance; //Normalize vector to a unit vector of 1
+    for (Particle& particleFrom : particles) {
+        sf::Vector2f netForce{0.0f, 0.0f};
+
+        for (const Particle& particleTo : particles) {
+            if (&particleFrom == &particleTo) continue; //Skip self checking
+            float force;
+            float distance;
+
+            sf::Vector2f direction;
+
+            std::tie(force, direction, distance)  = computeForce2Particles(particleFrom, particleTo);
+            netForce += force * direction;
+        }
+        //Compute gravitational pull
+        sf::Vector2f acc = netForce / particleFrom.mass;
+        // Apply calculated speeds
+        particleFrom.velocity += acc;
+        particleFrom.velocity *= friction;
+        particleFrom.checkBorderCollision(width, height);
+        particleFrom.moveby(particleFrom.velocity);
+        window.draw(particleFrom.returnObject());
     }
 
-    //Compute gravitational pull
-    float Force = ((green_mass * red_mass) * gravityMod) / pow(distance, 2);
-    float red_acc = Force / red_mass;
-    float green_acc = Force / green_mass;
-
-    if (distance > 2) { //prevent division by small number singulary
-        green_velocity = green_velocity + green_acc * G2Rdirection;
-        red_velocity = red_velocity + red_acc * -G2Rdirection;
-    }
-
-    CheckBorderCollision(width, height, RedPos, red_velocity, RedCircle.getRadius());
-    CheckBorderCollision(width, height, GreenPos, green_velocity, GreenCircle.getRadius());
     // CheckParticleCollision(RedCircle.getRadius(), GreenCircle.getRadius(), RedPos, GreenPos, red_velocity,
         // green_velocity, distance, G2Rdirection);
 
-    green_velocity *= friction;
-    red_velocity *= friction;
-
-    GreenCircle.move(green_velocity);
-    RedCircle.move(red_velocity);
-
-
-
-    window.draw(GreenCircle);
-    window.draw(RedCircle);
     window.display();
+    // std::cout << std::fixed << std::setprecision(5)  // Set precision to 5 decimal places
+    //       << "X: " << RedCircle.position.x - RedCircle.returnObject().getPosition().x
+    //       << " Y: " << RedCircle.position.y - RedCircle.returnObject().getPosition().y
+    //       << std::endl;
     int x = 1;
 
 }
