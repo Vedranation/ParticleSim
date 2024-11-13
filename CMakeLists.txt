@@ -10,5 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(ParticleSim main.cpp
         Particle.cpp
-        Particle.h)
+        Particle.h
+        utilities.h
+        utilities.cpp)
 target_link_libraries(ParticleSim sfml-graphics)
