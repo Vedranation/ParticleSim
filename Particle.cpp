@@ -36,29 +36,34 @@ void Particle::moveby(sf::Vector2f movement) {
     object.setPosition(position);
 }
 
-void Particle::checkBorderCollision(const int &width, const int &height) {
+void Particle::checkBorderCollision(const int &width, const int &height, const float& collisionLoss) {
 
     float threshhold = 0.00f;
     if (position.x - radius < 0.0f) { //Left wall
-        velocity.x = -velocity.x;
+        velocity.x = -velocity.x * collisionLoss;
+        velocity.y = velocity.y * collisionLoss;
         position.x = radius * (1.0f + threshhold); //Snap it back inside the playground
     }
     else if (position.x + radius > width) { //Right wall
-        velocity.x = -velocity.x;
+        velocity.x = -velocity.x * collisionLoss;
+        velocity.y = velocity.y * collisionLoss;
         position.x = (width - radius) * (1.0f - threshhold);
     }
 
     if (position.y - radius < 0.0f) { //Top wall
-        velocity.y = -velocity.y;
+        velocity.y = -velocity.y * collisionLoss;
+        velocity.x = velocity.x * collisionLoss;
         position.y = radius * (1.0f + threshhold);
     }
     else if (position.y + radius > height) { //Bottom wall
         velocity.y = -velocity.y;
+        velocity.x = velocity.x * collisionLoss;
         position.y = (height - radius) * (1.0f - threshhold);
     }
 }
 
-void Particle::CheckParticleCollision(Particle& ParticleTo, float const distance, const sf::Vector2f& direction) {
+void Particle::CheckParticleCollision(Particle& ParticleTo, float const distance, const sf::Vector2f& direction,
+    const float& collisionLoss) {
     if (distance <= radius + ParticleTo.radius) { //collision
         //Statics
         float overlap = (distance - radius - ParticleTo.radius);
@@ -82,10 +87,10 @@ void Particle::CheckParticleCollision(Particle& ParticleTo, float const distance
         float moment2 = (dotproductnorm2 * (ParticleTo.mass - mass) + 2.0f * mass * dotproductnorm1)
         / (mass + ParticleTo.mass);
 
-        velocity.x = tangent.x * dotproducttan1 + direction.x * moment1;
-        velocity.y = tangent.y * dotproducttan1 + direction.y * moment1;
-        ParticleTo.velocity.x = tangent.x * dotproducttan2 + direction.x * moment2;
-        ParticleTo.velocity.y = tangent.y * dotproducttan2 + direction.y * moment2;
+        velocity.x = collisionLoss * (tangent.x * dotproducttan1 + direction.x * moment1);
+        velocity.y = collisionLoss * (tangent.y * dotproducttan1 + direction.y * moment1);
+        ParticleTo.velocity.x = collisionLoss * (tangent.x * dotproducttan2 + direction.x * moment2);
+        ParticleTo.velocity.y = collisionLoss * (tangent.y * dotproducttan2 + direction.y * moment2);
 
     }
 }

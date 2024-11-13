@@ -25,15 +25,16 @@ int main() {
 
 unsigned long x = 1;
 
-    int width = 1920;
-    int height = 1080;
+    int width = 1900;
+    int height = 1000;
 
     float const gravityMod = 50.0f;
-    float friction = 0.97f;
-    const int blueParticleCount = 120;
-    const int redParticleCount = 3;
-    const int greenParticleCount = 200;
-    const int yellowParticleCount = 1;
+    float const friction = 0.97f; //Passive loss of velocity
+    float const collisionLoss = 0.995f; //Loss of velocity at collision due to heat
+    const int blueParticleCount = 0;
+    const int redParticleCount = 0;
+    const int greenParticleCount = 600;
+    const int yellowParticleCount = 0;
 
 sf::RenderWindow window(sf::VideoMode(width, height), "ParticleSim");
 window.setFramerateLimit(60);
@@ -45,7 +46,7 @@ particles.reserve(blueParticleCount+redParticleCount+greenParticleCount+yellowPa
 for (int i = 0; i < blueParticleCount; ++i) {
     float radius = 10.f;
     Particle BlueCircle(std::make_tuple(0.0f, 0.0f), distributeParticles(width, height, radius),
-        1.f, radius,std::make_tuple(50, 55, 255), 'b', -1, 1, 1, 1);
+        1.f, radius,std::make_tuple(50, 55, 255), 'b', 1, 1, 1, 1);
     particles.push_back(BlueCircle);
 }
 for (int i = 0; i < redParticleCount; ++i) {
@@ -57,7 +58,7 @@ for (int i = 0; i < redParticleCount; ++i) {
 for (int i = 0; i < greenParticleCount; ++i) {
     float radius = 5.f;
     Particle GreenCircle(std::make_tuple(0.0f, 0.0f), distributeParticles(width, height, radius),
-        0.1f, radius,std::make_tuple(50, 255, 55), 'g', 1, 1, -1, 1);
+        0.1f, radius,std::make_tuple(50, 255, 55), 'g', 1, 1, 1, 1);
     particles.push_back(GreenCircle);
 }
 for (int i = 0; i < yellowParticleCount; ++i) {
@@ -107,7 +108,7 @@ while (window.isOpen()) {
             particleFrom.netForce(particleTo, netForce, force, direction); //This applies attract or repel forces
 
             // drawLineBetweenParticles(window, particleFrom, particleTo);
-            particleFrom.CheckParticleCollision(particleTo, distance, direction);
+            particleFrom.CheckParticleCollision(particleTo, distance, direction, collisionLoss);
         }
         //Compute gravitational pull
         sf::Vector2f acc = netForce / particleFrom.mass;
@@ -115,7 +116,7 @@ while (window.isOpen()) {
         particleFrom.velocity += acc;
         particleFrom.velocity *= friction;
         particleFrom.moveby(particleFrom.velocity);
-        particleFrom.checkBorderCollision(width, height);
+        particleFrom.checkBorderCollision(width, height, collisionLoss);
 
         window.draw(particleFrom.returnObject());
     }

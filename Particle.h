@@ -25,8 +25,8 @@ public:
 
     sf::CircleShape returnObject() const;
     void moveby(sf::Vector2f movement);
-    void checkBorderCollision(const int& width, const int& height);
-    void CheckParticleCollision(Particle& ParticleTo, float const distance, const sf::Vector2f& direction);
+    void checkBorderCollision(const int& width, const int& height, const float& collisionLoss);
+    void CheckParticleCollision(Particle& ParticleTo, float distance, const sf::Vector2f& direction, const float& collisionLoss);
     std::tuple<float, sf::Vector2f, float> computeForce2Particles(const Particle& ParticleTo, const float gravityMod);
     sf::Vector2f netForce(const Particle& particleTo, sf::Vector2f& netForce, const float force, sf::Vector2f direction);
 
