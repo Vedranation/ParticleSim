@@ -8,27 +8,44 @@
 int width = 1280;
 int height = 720;
 
-float const gravityMod = 50.0f;
-float friction = 0.99f;
+float const gravityMod = 20.0f;
+float friction = 0.97f;
 
-void CheckParticleCollision(const int& redRadius, const int& greenRadius, const sf::Vector2f& redPos,
-                            const sf::Vector2f& greenPos, sf::Vector2f& redVel, sf::Vector2f& greenVel,
-                            float const distance, const sf::Vector2f& G2RdirectionNorm) {
-    if (distance <= redRadius + greenRadius) {//collision
+void CheckParticleCollision(Particle& Particle1, Particle& Particle2,
+                            float const distance, const sf::Vector2f& direction) {
+    if (distance <= Particle1.radius + Particle2.radius) { //collision
+        //Statics
+        float overlap = 0.5f * (distance - Particle1.radius - Particle2.radius);
+        Particle1.position += direction * overlap;
+        Particle2.position -= direction * overlap;
 
-        sf::Vector2f relativeVel = redVel - greenVel;
-        float velocityNormal = relativeVel.x * G2RdirectionNorm.x + relativeVel.y * G2RdirectionNorm.y;
+        //Dynamics
+        sf::Vector2f tangent;
+        //Tangential response
+        tangent.x = -direction.y;
+        tangent.y = direction.x;
+        float dotproducttan1 = Particle1.velocity.x * tangent.x + Particle1.velocity.y * tangent.y;
+        float dotproducttan2 = Particle2.velocity.x * tangent.x + Particle2.velocity.y * tangent.y;
+        //Normal response
+        float dotproductnorm1 = Particle1.velocity.x * direction.x + Particle1.velocity.y * direction.y;
+        float dotproductnorm2 = Particle2.velocity.x * direction.x + Particle2.velocity.y * direction.y;
+        float moment1 = (dotproductnorm1 * (Particle1.mass - Particle2.mass) + 2.0f * Particle2.mass * dotproductnorm2)
+        / (Particle1.mass + Particle2.mass);
+        float moment2 = (dotproductnorm2 * (Particle2.mass - Particle1.mass) + 2.0f * Particle1.mass * dotproductnorm1)
+        / (Particle1.mass + Particle2.mass);
+
+        Particle1.velocity.x = tangent.x * dotproducttan1 + direction.x * moment1;
+        Particle1.velocity.y = tangent.y * dotproducttan1 + direction.y * moment1;
+        Particle2.velocity.x = tangent.x * dotproducttan2 + direction.x * moment2;
+        Particle2.velocity.y = tangent.y * dotproducttan2 + direction.y * moment2;
 
 
-            //Particles moving toward each other
-            redVel = redVel + -1.0f * G2RdirectionNorm;
-            greenVel = greenVel + -1.0f * G2RdirectionNorm;
 
 
     }
 }
 
-std::tuple<float, sf::Vector2f, float> computeForce2Particles(Particle Particle1, Particle Particle2) {
+std::tuple<float, sf::Vector2f, float> computeForce2Particles(const Particle& Particle1, const Particle& Particle2) {
     //Returns force, direction and distance
     sf::Vector2f direction = Particle2.position - Particle1.position;
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
@@ -61,15 +78,28 @@ sf::RenderWindow window(sf::VideoMode(width, height), "ParticleSim");
 window.setFramerateLimit(60);
 
 // Create the circle shape once, outside the main loop
+const int blueParticleCount = 30;
+const int redParticleCount = 2;
+const int greenParticleCount = 0;
 
-Particle BlueCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(300.0f, 300.0f), 20.0f, 20.f,
-    std::make_tuple(50, 55, 255));
-Particle GreenCircle(std::make_tuple(25.0f, 0.0f), std::make_tuple(100.0f, 150.0f), 20.0f, 20.f,
-    std::make_tuple(50, 255, 55));
-Particle RedCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(200.0f, 200.0f), 20.0f, 20.f,
+std::vector<Particle> particles;
+particles.reserve(blueParticleCount+redParticleCount+greenParticleCount);    // Reserve space to avoid reallocation
+
+for (int i = 0; i < blueParticleCount; ++i) {
+    Particle BlueCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(150.0f + i * 50.0f, 300.0f + i * 30.0f),
+        20.0f, 20.f,std::make_tuple(50, 55, 255));
+    particles.push_back(BlueCircle);
+}
+for (int i = 0; i < redParticleCount; ++i) {
+    Particle RedCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(200.0f + i * 50, 200.0f), 100.0f, 50.f,
 std::make_tuple(255, 55, 55));
-
-std::vector<Particle> particles = {BlueCircle, GreenCircle, RedCircle};
+    particles.push_back(RedCircle);
+}
+for (int i = 0; i < greenParticleCount; ++i) {
+    Particle GreenCircle(std::make_tuple(25.0f, 0.0f), std::make_tuple(600.0f, 150.0f), 300.0f, 60.f,
+    std::make_tuple(50, 255, 55));
+    particles.push_back(GreenCircle);
+}
 
 while (window.isOpen()) {
 
@@ -100,7 +130,7 @@ while (window.isOpen()) {
     for (Particle& particleFrom : particles) {
         sf::Vector2f netForce{0.0f, 0.0f};
 
-        for (const Particle& particleTo : particles) {
+        for (Particle& particleTo : particles) {
             if (&particleFrom == &particleTo) continue; //Skip self checking
             float force;
             float distance;
@@ -109,7 +139,8 @@ while (window.isOpen()) {
 
             std::tie(force, direction, distance)  = computeForce2Particles(particleFrom, particleTo);
             netForce += force * direction;
-            drawLineBetweenParticles(window, particleFrom, particleTo);
+            // drawLineBetweenParticles(window, particleFrom, particleTo);
+            CheckParticleCollision(particleFrom, particleTo, distance, direction);
         }
         //Compute gravitational pull
         sf::Vector2f acc = netForce / particleFrom.mass;
@@ -118,17 +149,12 @@ while (window.isOpen()) {
         particleFrom.velocity *= friction;
         particleFrom.moveby(particleFrom.velocity);
         particleFrom.checkBorderCollision(width, height);
+
         window.draw(particleFrom.returnObject());
     }
 
-    // CheckParticleCollision(RedCircle.getRadius(), GreenCircle.getRadius(), RedPos, GreenPos, red_velocity,
-        // green_velocity, distance, G2Rdirection);
-
     window.display();
-    std::cout << std::fixed << std::setprecision(8)  // Set precision to 5 decimal places
-          << "X: " << GreenCircle.position.x - GreenCircle.returnObject().getPosition().x
-          << " Y: " << GreenCircle.position.y - GreenCircle.returnObject().getPosition().y
-          << std::endl;
+
     x += 1;
 
 }
