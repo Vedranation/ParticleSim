@@ -38,21 +38,35 @@ std::tuple<float, sf::Vector2f, float> computeForce2Particles(Particle Particle1
     float force = ((Particle1.mass * Particle2.mass) * ::gravityMod) / pow(distance, 2);
     return std::make_tuple(force, direction, distance);
 }
+void drawLineBetweenParticles(sf::RenderWindow& window, const Particle& particle1, const Particle& particle2) {
+    // Create a VertexArray with two points
+    sf::VertexArray line(sf::Lines, 2);
 
+    // Set the position of each vertex to the origin of each particle
+    line[0].position = particle1.position;
+    line[1].position = particle2.position;
+
+    // Set the color of the line (for debugging, bright colors are easier to see)
+    line[0].color = sf::Color::Red;
+    line[1].color = sf::Color::Red;
+
+    // Draw the line on the window
+    window.draw(line);
+}
 
 int main() {
 
-
+unsigned long x = 1;
 sf::RenderWindow window(sf::VideoMode(width, height), "ParticleSim");
 window.setFramerateLimit(60);
 
 // Create the circle shape once, outside the main loop
 
-Particle BlueCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(300.0f, 300.0f), 20.0f, 50.f,
+Particle BlueCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(300.0f, 300.0f), 20.0f, 20.f,
     std::make_tuple(50, 55, 255));
-Particle GreenCircle(std::make_tuple(25.0f, 0.0f), std::make_tuple(100.0f, 150.0f), 20.0f, 50.f,
+Particle GreenCircle(std::make_tuple(25.0f, 0.0f), std::make_tuple(100.0f, 150.0f), 20.0f, 20.f,
     std::make_tuple(50, 255, 55));
-Particle RedCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(200.0f, 200.0f), 20.0f, 50.f,
+Particle RedCircle(std::make_tuple(0.0f, 0.0f), std::make_tuple(200.0f, 200.0f), 20.0f, 20.f,
 std::make_tuple(255, 55, 55));
 
 std::vector<Particle> particles = {BlueCircle, GreenCircle, RedCircle};
@@ -95,14 +109,15 @@ while (window.isOpen()) {
 
             std::tie(force, direction, distance)  = computeForce2Particles(particleFrom, particleTo);
             netForce += force * direction;
+            drawLineBetweenParticles(window, particleFrom, particleTo);
         }
         //Compute gravitational pull
         sf::Vector2f acc = netForce / particleFrom.mass;
         // Apply calculated speeds
         particleFrom.velocity += acc;
         particleFrom.velocity *= friction;
-        particleFrom.checkBorderCollision(width, height);
         particleFrom.moveby(particleFrom.velocity);
+        particleFrom.checkBorderCollision(width, height);
         window.draw(particleFrom.returnObject());
     }
 
@@ -110,11 +125,11 @@ while (window.isOpen()) {
         // green_velocity, distance, G2Rdirection);
 
     window.display();
-    // std::cout << std::fixed << std::setprecision(5)  // Set precision to 5 decimal places
-    //       << "X: " << RedCircle.position.x - RedCircle.returnObject().getPosition().x
-    //       << " Y: " << RedCircle.position.y - RedCircle.returnObject().getPosition().y
-    //       << std::endl;
-    int x = 1;
+    std::cout << std::fixed << std::setprecision(8)  // Set precision to 5 decimal places
+          << "X: " << GreenCircle.position.x - GreenCircle.returnObject().getPosition().x
+          << " Y: " << GreenCircle.position.y - GreenCircle.returnObject().getPosition().y
+          << std::endl;
+    x += 1;
 
 }
 

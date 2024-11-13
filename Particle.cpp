@@ -18,13 +18,13 @@ Particle::Particle(std::tuple<float, float> invelocity, std::tuple<float, float>
     object.setPosition(position);
     }
 
-sf::CircleShape Particle::returnObject() {
+sf::CircleShape Particle::returnObject() const {
     return object;
 }
 
 void Particle::moveby(sf::Vector2f movement) {
     position += movement;
-    object.move(movement);
+    object.setPosition(position);
 }
 
 void Particle::checkBorderCollision(const int &width, const int &height) {
@@ -33,22 +33,18 @@ void Particle::checkBorderCollision(const int &width, const int &height) {
     if (position.x - radius < 0.0f) { //Left wall
         velocity.x = -velocity.x;
         position.x = radius * (1.0f + threshhold); //Snap it back inside the playground
-        return;
     }
     else if (position.x + radius > width) { //Right wall
         velocity.x = -velocity.x;
         position.x = (width - radius) * (1.0f - threshhold);
-        return;
     }
 
     if (position.y - radius < 0.0f) { //Top wall
         velocity.y = -velocity.y;
         position.y = radius * (1.0f + threshhold);
-        return;
     }
     else if (position.y + radius > height) { //Bottom wall
         velocity.y = -velocity.y;
         position.y = (height - radius) * (1.0f - threshhold);
-        return;
     }
 }

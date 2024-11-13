@@ -15,7 +15,7 @@ public:
     sf::Vector2f position;
     float const mass;
     float const radius;
-    sf::CircleShape returnObject();
+    sf::CircleShape returnObject() const;
     void moveby(sf::Vector2f movement);
     void checkBorderCollision(const int& width, const int& height);
 
